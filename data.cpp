@@ -20,12 +20,44 @@ bool strcmp(char* str1, char* str2)
 }
 bool find(char* str1, char* str2)
 {
-    for (int i = 0; str1[i] != '\0'; i++){
-        if (str1[i] != str2[i]){
-            return false;
+    for (int i = 0; str2[i] != '\0'; i++){
+        if (str1[0] == str2[i]){
+            bool flag = true;
+            for (int j = 1; str1[j] != '\0'; j++){
+                if (str1[j] != str2[i + j]){
+                    flag = false;
+                    break;
+                }
+            }
+            if (flag){
+                return true;
+            }
         }
     }
-    return true;
+    return false;
+}
+int choice(int* indices, int max_ind)
+{
+    int in;
+    cout << "0. Назад" << endl << endl;
+    while (true){
+        cout << "> ";
+        if ((cin >> in).good() and in >= 0 and in < max_ind){
+            if (in == 0){
+                delete [] indices;
+                return -1;
+            }else{
+                in = indices[in - 1];
+                delete [] indices;
+                return in;
+            }
+        }
+        if (cin.fail()){
+            cin.clear();
+        }
+        cout << "Неверное значение" << endl << endl;
+        cin.ignore(100, '\n');
+    }
 }
 Data::Data()
 {
@@ -61,17 +93,19 @@ Data::Data(char* file)
         f.read(snils, 11);
         char* phone_number = new char [12];
         f.read(phone_number, 12);
-        if (!(f >> buffer_int))
+        int address_bcount;
+        if (!(f >> address_bcount))
             throw 3;
         f.seekg(1, ios::cur);
-        char* address = new char [buffer_int + 1];
-        f.read(address, buffer_int);
-        if (!(f >> buffer_int))
+        char* address = new char [address_bcount + 1];
+        f.read(address, address_bcount);
+        int name_bcount;
+        if (!(f >> name_bcount))
             throw 3;
         f.seekg(1, ios::cur);
-        char* name = new char [buffer_int + 1];
-        f.read(name, buffer_int);
-        Person* pers = new Person(name, phone_number, snils, address);
+        char* name = new char [name_bcount + 1];
+        f.read(name, name_bcount);
+        Person* pers = new Person(name_bcount, name, phone_number, snils, address_bcount, address);
         people[i] = pers;
         count_elements++;
     }
@@ -104,10 +138,33 @@ int Data::hash_func(char* key, int n)
     hF = h * hF - (int)h * hF;
     return (int)(hF * size);
 }
-int Data::print_all()
+void Data::save_in_file()
 {
-    int in;
-    int* index = new int [count_elements];
+    fstream f(file_name, ios::out|ios::trunc|ios::binary);
+    if (!f)
+        throw 2;
+    int buffer_int = 0;
+    float new_size = size;
+    while (new_size > 1){
+        buffer_int++;
+        new_size /= 2;
+    }
+    f << buffer_int << '\n';
+    for (int i = 0; i < size; i++){
+        Person* pers = people[i];
+        if (pers == nullptr){
+            f << "0\n";
+            continue;
+        }
+        f << "1 " << pers->get_snils() << pers->get_phone_number() <<
+             " " << pers->get_address_bcount() << " " << pers->get_address() <<
+             " " << pers->get_name_bcount() << " " << pers->get_name() << '\n';
+    }
+    f.close();
+}
+void Data::print_all()
+{
+    int* indices = new int [count_elements];
     cout << "Вывести всю таблицу" << endl;
     int ind = 1;
     for (int i = 0; i < size; i++){
@@ -115,28 +172,15 @@ int Data::print_all()
         if (pers != nullptr){
             cout << ind << ". ";
             pers->print_short();
-            index[ind - 1] = i;
+            indices[ind - 1] = i;
             ind++;
         }
     }
-    cout << "0. Назад" << endl << endl;
-    while (true){
-        cout << "> ";
-        cin >> in;
-        if (in >= 0 and in < ind){
-            if (in == 0){
-                delete [] index;
-                return -1;
-            }else{
-                in = index[in - 1];
-                delete [] index;
-                return in;
-            }
-        }else{
-            cout << "Неверное значение" << endl << endl;
-            continue;
-        }
+    ind = choice(indices, ind);
+    if (ind != -1){
+        action_with_a_persone(ind);
     }
+    return;
 }
 void Data::action_with_a_persone(int id)
 {
@@ -154,8 +198,7 @@ void Data::action_with_a_persone(int id)
     cout << "0. Назад" << endl << endl;
     while (true){
         cout << "> ";
-        cin >> in;
-        if (in >= 0 and in < 3){
+        if ((cin >> in).good() and in >= 0 and in < 3){
             switch (in) {
             case 1:
 
@@ -164,10 +207,12 @@ void Data::action_with_a_persone(int id)
             default:
                 return;
             }
-        }else{
-            cout << "Неверное значение" << endl << endl;
-            continue;
         }
+        if (cin.fail()){
+            cin.clear();
+        }
+        cout << "Неверное значение" << endl << endl;
+        cin.ignore(100, '\n');
     }
 }
 void Data::search(int mode)
@@ -195,6 +240,8 @@ void Data::search(int mode)
         cout << "Требуется рехеширование!" << endl;
         return;
     }else{
+        int* indices = new int [count_elements];
+        int ind = 1;
         for (int i = 0; i < size; i++){
             char* temp;
             Person* pers = people[i];
@@ -211,9 +258,26 @@ void Data::search(int mode)
             default:
                 throw 4;
             }
-            if (find(temp, in)){
-
+            if (find(in, temp)){
+                cout << ind << ". ";
+                pers->print_short();
+                indices[ind - 1] = i;
+                ind++;
             }
         }
+        if (ind == 1){
+            cout << "Совпадений не найдено" << endl;
+            delete [] indices;
+            return;
+        }
+        ind = choice(indices, ind);
+        if (ind != -1){
+            action_with_a_persone(ind);
+        }
+        return;
     }
+}
+void Data::append(Person* pers)
+{
+
 }
