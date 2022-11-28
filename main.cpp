@@ -163,6 +163,8 @@ int main(int argc, char* argv[])
                 }
             }else if (m == 3){
                 db->print_all();
+            }else if (m == 4){
+                db->rehashing();
             }
         }
 //    }catch (int err){

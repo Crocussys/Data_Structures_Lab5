@@ -88,6 +88,13 @@ Data::Data(char* file)
             people[i] = nullptr;
             continue;
         }
+        if (buffer_int == 2){
+            char temp[8] = "DELETED";
+            Person* pers = new Person(8, temp, temp, temp, 8, temp);
+            pers->del();
+            people[i] = pers;
+            continue;
+        }
         f.seekg(1, ios::cur);
         char* snils = new char [11];
         f.read(snils, 11);
@@ -122,21 +129,23 @@ Data::~Data()
     size = 0;
     count_elements = 0;
 }
-int Data::hash(char* key)
+int Data::hash_func(char* key)
 {
     int h = 1;
     for (int i = 3; i < 12; i++){
-        h = (h * (int)key[i]) % size;
+        h *= (int)key[i];
+        h %= size;
+        if (h == 0){
+            h = 1;
+        }
     }
-    return h;
-}
-int Data::hash_func(char* key, int n)
-{
-    double hF;
-    int h = hash(key);
-    hF = (double)n * 0.6180339887;
-    hF = h * hF - (int)h * hF;
+    double hF = h * 0.6180339887;
+    hF -= (int) hF;
     return (int)(hF * size);
+}
+int Data::collision(int prev, int i)
+{
+    return prev + 2 * i + i * i;
 }
 void Data::save_in_file()
 {
@@ -154,6 +163,10 @@ void Data::save_in_file()
         Person* pers = people[i];
         if (pers == nullptr){
             f << "0\n";
+            continue;
+        }
+        if (pers->is_deleted()){
+            f << "2\n";
             continue;
         }
         f << "1 " << pers->get_snils() << pers->get_phone_number() <<
@@ -203,7 +216,8 @@ void Data::action_with_a_persone(int id)
             case 1:
 
             case 2:
-
+                remove(id);
+                break;
             default:
                 return;
             }
@@ -225,7 +239,8 @@ void Data::search(int mode)
     cout << "Введите строку> ";
     cin >> in;
     if (mode == 1){
-        for (int i = 0; i < 5; i++){
+        int i = 1;
+        while (true){
             int a = hash_func(in, i);
             Person* pers = people[a];
             if (pers == nullptr){
@@ -236,6 +251,7 @@ void Data::search(int mode)
                 action_with_a_persone(a);
                 return;
             }
+            i++;
         }
         cout << "Требуется рехеширование!" << endl;
         return;
@@ -243,26 +259,28 @@ void Data::search(int mode)
         int* indices = new int [count_elements];
         int ind = 1;
         for (int i = 0; i < size; i++){
-            char* temp;
             Person* pers = people[i];
-            switch (mode) {
-            case 2:
-                temp = pers->get_name();
-                break;
-            case 3:
-                temp = pers->get_snils();
-                break;
-            case 4:
-                temp = pers->get_address();
-                break;
-            default:
-                throw 4;
-            }
-            if (find(in, temp)){
-                cout << ind << ". ";
-                pers->print_short();
-                indices[ind - 1] = i;
-                ind++;
+            if (pers != nullptr){
+                char* temp;
+                switch (mode) {
+                case 2:
+                    temp = pers->get_name();
+                    break;
+                case 3:
+                    temp = pers->get_snils();
+                    break;
+                case 4:
+                    temp = pers->get_address();
+                    break;
+                default:
+                    throw 4;
+                }
+                if (find(in, temp)){
+                    cout << ind << ". ";
+                    pers->print_short();
+                    indices[ind - 1] = i;
+                    ind++;
+                }
             }
         }
         if (ind == 1){
@@ -279,5 +297,59 @@ void Data::search(int mode)
 }
 void Data::append(Person* pers)
 {
-
+    if (count_elements >= size){
+        cout << "Ошибка!" << endl;
+        cout << "Требуется рехеширование!" << endl;
+        return;
+    }
+    char* key = pers->get_phone_number();
+    int ind = hash_func(key);
+    int i = 0;
+    Person* p = people[ind];
+    while (!p->is_deleted() and !strcmp(p->get_phone_number(), key)) {
+        i++;
+        ind = collision(ind, i);
+        if (people[ind] == nullptr){
+            people[ind] = pers;
+            count_elements++;
+            save_in_file();
+            break;
+        }
+    }
+    if (i > 4){
+        cout << "Требуется рехеширование!" << endl;
+    }
+}
+void Data::rehashing()
+{
+    size *= 2;
+    Person** new_array = new Person* [size];
+    for (int i = 0; i < size / 2; i++){
+        Person* pers = people[i];
+        if (pers != nullptr){
+            int j = 1;
+            while (true) {
+                int ind = hash_func(pers->get_phone_number(), j);
+                if (new_array[ind] == nullptr){
+                    new_array[ind] = pers;
+                    break;
+                }
+                j++;
+            }
+        }
+    }
+    delete [] people;
+    people = new_array;
+    save_in_file();
+}
+void Data::remove(int id)
+{
+    if (id < 0 or id >= size){
+        throw 4;
+    }
+    Person* pers = people[id];
+    if (pers != nullptr){
+        pers->del();
+        save_in_file();
+    }
 }

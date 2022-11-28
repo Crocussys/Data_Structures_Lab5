@@ -11,6 +11,7 @@ private:
     char* snils;
     char* company_address;
     int address_bcount;
+    bool deleted;
 public:
     Person(int nbc, char* n, char* p, char* s, int abc, char* a);
     ~Person();
@@ -22,6 +23,8 @@ public:
     char* get_snils();
     int get_address_bcount();
     char* get_address();
+    bool is_deleted();
+    void del();
 };
 
 #endif // PERSON_H

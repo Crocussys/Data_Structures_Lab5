@@ -11,8 +11,8 @@ private:
     int size;
     char* file_name;
 
-    int hash(char* key);
-    int hash_func(char* key, int n);
+    int hash_func(char* key);
+    int collision(int prev, int i);
     void save_in_file();
 public:
     Data();
@@ -20,7 +20,7 @@ public:
     ~Data();
     void search(int mode);
     void append(Person* pers);
-    void remove();
+    void remove(int id);
     void print_all();
     void rehashing();
     void action_with_a_persone(int id);

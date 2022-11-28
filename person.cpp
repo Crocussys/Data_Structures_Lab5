@@ -11,6 +11,7 @@ Person::Person(int nbc, char* n, char* p, char* s, int abc, char* a)
     snils = s;
     address_bcount = abc;
     company_address = a;
+    deleted = false;
 }
 Person::~Person()
 {
@@ -24,6 +25,7 @@ Person::~Person()
     company_address = nullptr;
     name_bcount = 0;
     company_address = 0;
+    deleted = false;
 }
 void Person::print_short()
 {
@@ -59,4 +61,12 @@ int Person::get_address_bcount()
 char* Person::get_address()
 {
     return company_address;
+}
+bool Person::is_deleted()
+{
+    return deleted;
+}
+void Person::del()
+{
+    deleted = true;
 }
