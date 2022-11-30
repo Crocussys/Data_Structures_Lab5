@@ -13,6 +13,7 @@ private:
     int address_bcount;
     bool deleted;
 public:
+    Person();
     Person(int nbc, char* n, char* p, char* s, int abc, char* a);
     ~Person();
     void print_all();

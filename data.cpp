@@ -59,6 +59,74 @@ int choice(int* indices, int max_ind)
         cin.ignore(100, '\n');
     }
 }
+Person* new_pers()
+{
+    int name_bcount = 0;
+    char* name_buffer  = new char [1024];
+    char* phone_number = new char [12];
+    char* snils = new char [11];
+    int address_bcount = 0;
+    char* company_address_buffer = new char [1024];
+
+    cout << "Введите имя> ";
+    cin.ignore(100, '\n');
+    cin.getline(name_buffer, 1024);
+    while (name_buffer[name_bcount] != '\0'){
+        name_bcount++;
+    }
+    char* name = new char [name_bcount + 1];
+    for (int i = 0; i < name_bcount; i++){
+        name[i] = name_buffer[i];
+    }
+    name[name_bcount] = '\0';
+    delete [] name_buffer;
+
+    cout << "Введите номер телефона (+79..)> ";
+    cin.getline(phone_number, 13);
+
+    cout << "Введите СНИЛС> ";
+    cin.getline(snils, 12);
+
+    cout << "Введите адрес> ";
+    cin.getline(company_address_buffer, 1024);
+    while (company_address_buffer[address_bcount] != '\0'){
+        address_bcount++;
+    }
+    char* company_address = new char [address_bcount + 1];
+    for (int i = 0; i < address_bcount; i++){
+        company_address[i] = company_address_buffer[i];
+    }
+    company_address[address_bcount] = '\0';
+    delete [] company_address_buffer;
+
+    Person* pers = new Person(name_bcount, name, phone_number,
+                              snils, address_bcount, company_address);
+    int in;
+    bool inv_val = false;
+    while (true){
+        cout << endl << "Вы уверены, что хотите добавить эту запись?" << endl;
+        pers->print_all();
+        cout << endl << "0. Да" << endl << "1. Нет" << endl << endl;
+        if (inv_val){
+            cout << "Неверное значение" << endl << endl;
+        }
+        cout << "> ";
+        if ((cin >> in).good() and in >= 0 and in < 2){
+            break;
+        }
+        if (cin.fail()){
+            cin.clear();
+        }
+        inv_val = true;
+        cin.ignore(100, '\n');
+    }
+    if (in == 0){
+        return pers;
+    }else{
+        delete pers;
+        return nullptr;
+    }
+}
 Data::Data()
 {
     count_elements = 0;
@@ -89,9 +157,7 @@ Data::Data(char* file)
             continue;
         }
         if (buffer_int == 2){
-            char temp[8] = "DELETED";
-            Person* pers = new Person(8, temp, temp, temp, 8, temp);
-            pers->del();
+            Person* pers = new Person();
             people[i] = pers;
             continue;
         }
@@ -145,7 +211,7 @@ int Data::hash_func(char* key)
 }
 int Data::collision(int prev, int i)
 {
-    return prev + 2 * i + i * i;
+    return (prev + 2 * i + i * i) % size;
 }
 void Data::save_in_file()
 {
@@ -182,7 +248,7 @@ void Data::print_all()
     int ind = 1;
     for (int i = 0; i < size; i++){
         Person* pers = people[i];
-        if (pers != nullptr){
+        if (pers != nullptr and !pers->is_deleted()){
             cout << ind << ". ";
             pers->print_short();
             indices[ind - 1] = i;
@@ -206,19 +272,15 @@ void Data::action_with_a_persone(int id)
         throw 4;
     }
     pers->print_all();
-    cout << endl << "1. Изменить" << endl;
-    cout << "2. Удалить" << endl;
+    cout << endl << "1. Удалить" << endl;
     cout << "0. Назад" << endl << endl;
     while (true){
         cout << "> ";
         if ((cin >> in).good() and in >= 0 and in < 3){
-            switch (in) {
-            case 1:
-
-            case 2:
+            if (in == 1){
                 remove(id);
-                break;
-            default:
+                return;
+            }else if (in == 0){
                 return;
             }
         }
@@ -239,19 +301,20 @@ void Data::search(int mode)
     cout << "Введите строку> ";
     cin >> in;
     if (mode == 1){
-        int i = 1;
+        int ind = hash_func(in);
+        int i = 0;
         while (true){
-            int a = hash_func(in, i);
-            Person* pers = people[a];
+            Person* pers = people[ind];
             if (pers == nullptr){
                 cout << "Совпадений не найдено" << endl;
                 return;
             }
-            if (strcmp(pers->get_phone_number(), in)){
-                action_with_a_persone(a);
+            if (!pers->is_deleted() and strcmp(pers->get_phone_number(), in)){
+                action_with_a_persone(ind);
                 return;
             }
             i++;
+            ind = collision(ind, i);
         }
         cout << "Требуется рехеширование!" << endl;
         return;
@@ -295,26 +358,35 @@ void Data::search(int mode)
         return;
     }
 }
-void Data::append(Person* pers)
+void Data::append()
 {
     if (count_elements >= size){
         cout << "Ошибка!" << endl;
         cout << "Требуется рехеширование!" << endl;
         return;
     }
-    char* key = pers->get_phone_number();
-    int ind = hash_func(key);
+    Person* pers = new_pers();
+    if (pers == nullptr){
+        return;
+    }
+    int ind = hash_func(pers->get_phone_number());
     int i = 0;
-    Person* p = people[ind];
-    while (!p->is_deleted() and !strcmp(p->get_phone_number(), key)) {
-        i++;
-        ind = collision(ind, i);
-        if (people[ind] == nullptr){
+    while (true) {
+        Person* p = people[ind];
+        bool flag = false;
+        if (p == nullptr){
+            flag = true;
+        }else if (p->is_deleted()){
+            flag = true;
+        }
+        if (flag){
             people[ind] = pers;
             count_elements++;
             save_in_file();
             break;
         }
+        i++;
+        ind = collision(ind, i);
     }
     if (i > 4){
         cout << "Требуется рехеширование!" << endl;
@@ -327,14 +399,22 @@ void Data::rehashing()
     for (int i = 0; i < size / 2; i++){
         Person* pers = people[i];
         if (pers != nullptr){
-            int j = 1;
+            int ind = hash_func(pers->get_phone_number());
+            int j = 0;
             while (true) {
-                int ind = hash_func(pers->get_phone_number(), j);
-                if (new_array[ind] == nullptr){
+                Person* p = new_array[ind];
+                bool flag = false;
+                if (p == nullptr){
+                    flag = true;
+                }else if (p->is_deleted()){
+                    flag = true;
+                }
+                if (flag){
                     new_array[ind] = pers;
                     break;
                 }
                 j++;
+                ind = collision(ind, j);
             }
         }
     }
@@ -348,8 +428,9 @@ void Data::remove(int id)
         throw 4;
     }
     Person* pers = people[id];
-    if (pers != nullptr){
+    if (pers != nullptr and !pers->is_deleted()){
         pers->del();
+        count_elements--;
         save_in_file();
     }
 }

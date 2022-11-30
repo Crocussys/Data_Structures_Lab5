@@ -19,7 +19,7 @@ public:
     Data(char* file);
     ~Data();
     void search(int mode);
-    void append(Person* pers);
+    void append();
     void remove(int id);
     void print_all();
     void rehashing();
