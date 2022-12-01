@@ -57,7 +57,7 @@ int mode_selection()
 
 int main(int argc, char* argv[])
 {
-//    try{
+    try{
         if (argc < 2){
             throw 1;
         }
@@ -83,22 +83,22 @@ int main(int argc, char* argv[])
                 throw 4;
             }
         }
-//    }catch (int err){
-//        switch (err) {
-//        case 1:
-//            cout << "Not enough arguments" << endl;
-//            break;
-//        case 2:
-//            cout << "File error" << endl;
-//            break;
-//        case 3:
-//            cout << "Invalid value" << endl;
-//            break;
-//        default:
-//            cout << "Unknown error" << endl;
-//            return -1;
-//        }
-//        return err;
-//    }
+    }catch (int err){
+        switch (err) {
+        case 1:
+            cout << "Not enough arguments" << endl;
+            break;
+        case 2:
+            cout << "File error" << endl;
+            break;
+        case 3:
+            cout << "Invalid value" << endl;
+            break;
+        default:
+            cout << "Unknown error" << endl;
+            return -1;
+        }
+        return err;
+    }
     return 0;
 }
